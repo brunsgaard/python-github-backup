@@ -18,6 +18,9 @@ import subprocess
 import sys
 import time
 import platform
+
+from ratelimit import limits, sleep_and_retry
+
 PY2 = False
 try:
     # python 3
@@ -464,6 +467,10 @@ def get_query_args(query_args=None):
         query_args = {}
     return query_args
 
+@sleep_and_retry
+@limits(calls=20, period=15)
+def urlopen_(request):
+    return urlopen(request)
 
 def _get_response(request, auth, template):
     retry_timeout = 3
@@ -473,7 +480,7 @@ def _get_response(request, auth, template):
     while True:
         should_continue = False
         try:
-            r = urlopen(request)
+            r = urlopen_(request)
         except HTTPError as exc:
             errors, should_continue = _request_http_error(exc, auth, errors)  # noqa
             r = exc
